@@ -43,7 +43,7 @@ async function run() {
     // middleware
 
     const verifyToken = (req, res, next) => {
-      console.log(req.headers.authorization);
+      // console.log(req.headers.authorization);
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "forbidden access" });
       }
@@ -134,9 +134,42 @@ async function run() {
       res.send(result);
     });
 
+    // app.get("/menu/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   const query = { _id: new ObjectId(id) };
+    //   const result = await menuCollection.findOne(query);
+    //   res.send(result);
+    // });
+    app.get("/menu/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      // const query = { _id: id };
+      const result = await menuCollection.findOne(query);
+      res.send(result);
+    });
+
     app.post("/menu", verifyToken, verifyAdmin, async (req, res) => {
       const menuData = req.body;
       const result = await menuCollection.insertOne(menuData);
+      res.send(result);
+    });
+
+    app.patch("/menu/:id", async (req, res) => {
+      const item = req.body;
+      const id = req.params.id;
+      // const filter = { _id: id };
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          name: item.name,
+          category: item.category,
+          price: item.price,
+          recipe: item.recipe,
+          image: item.image,
+        },
+      };
+
+      const result = await menuCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
 
