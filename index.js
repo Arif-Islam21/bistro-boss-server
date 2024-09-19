@@ -50,7 +50,7 @@ async function run() {
         return res.status(401).send({ message: "unauthorized access" });
       }
       const token = req.headers.authorization.split(" ")[1];
-      console.log(token);
+      // console.log(token);
       jwt.verify(token, process.env.TOKEN_SECRET, (err, decoded) => {
         if (err) {
           return res.status(403).send({ message: "forbidden access" });
@@ -220,7 +220,7 @@ async function run() {
       const paymentResult = await paymentCollection.insertOne(payment);
 
       // carefully delete each item from the cart
-      console.log("payment info", payment);
+      // console.log("payment info", payment);
       const query = {
         _id: {
           $in: payment.cartIds.map((id) => new ObjectId(id)),
@@ -256,6 +256,43 @@ async function run() {
       const { totalRevinue } = revinue.length > 0 ? revinue[0] : 0;
 
       res.send({ users, menuItems, orders, totalRevinue });
+    });
+
+    app.get("/order-stats", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await paymentCollection
+        .aggregate([
+          {
+            $unwind: "$menuItemIds",
+          },
+          {
+            $lookup: {
+              from: "menu",
+              localField: "menuItemIds",
+              foreignField: "_id",
+              as: "menuItems",
+            },
+          },
+          {
+            $unwind: "$menuItems",
+          },
+          {
+            $group: {
+              _id: "$menuItems.category",
+              quantity: { $sum: 1 },
+              revinue: { $sum: "$menuItems.price" },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              category: "$_id",
+              quantity: "$quantity",
+              revinue: "$revinue",
+            },
+          },
+        ])
+        .toArray();
+      res.send(result);
     });
 
     app.get("/carts", async (req, res) => {
