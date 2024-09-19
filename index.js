@@ -232,6 +232,32 @@ async function run() {
       res.send({ paymentResult, deleteResult });
     });
 
+    // analitics
+    app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
+      const users = await userCollection.estimatedDocumentCount();
+      const menuItems = await menuCollection.estimatedDocumentCount();
+      const orders = await paymentCollection.estimatedDocumentCount();
+
+      // this is not the best way to find revinue
+      // const payments = await paymentCollection.find().toArray();
+      // const revinue = payments.reduce((total, item) => total + item.price, 0);
+
+      const revinue = await paymentCollection
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              totalRevinue: { $sum: "$price" },
+            },
+          },
+        ])
+        .toArray();
+
+      const { totalRevinue } = revinue.length > 0 ? revinue[0] : 0;
+
+      res.send({ users, menuItems, orders, totalRevinue });
+    });
+
     app.get("/carts", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
